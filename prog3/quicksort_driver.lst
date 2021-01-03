@@ -1,0 +1,289 @@
+Microsoft (R) Macro Assembler Version 6.15.8803		    04/20/19 23:09:39
+quicksort_driver.asm					     Page 1 - 1
+
+
+				; Program #3: Quick Sort
+				; Author:     Maddison Davenport
+				; Date:       4/9/2019
+
+				.686
+				.MODEL FLAT
+
+				ExitProcess PROTO NEAR32 stdcall, dwExitCode:WORD
+
+				INCLUDE debug.h
+			      C INCLUDE io.h
+			      C ; IO.H -- header file for I/O macros
+			      C ; 32-bit version for flat memory model
+			      C ; R. Detmer   last revised 8/2000
+			      C .NOLIST     ; turn off listing
+			      C .LIST        ; begin listing
+			      C 
+			      C 
+ = 0000000D		      C CR          EQU    0Dh   ; carriage return character
+ = 0000000A		      C LF          EQU    0Ah   ; linefeed character
+			      C 
+ 00000000		      C .DATA
+ 00000000 0D 0A 00	      C carriage    BYTE     CR, LF, 0
+ 00000003  0000000D [	      C text        BYTE     13 DUP(?)
+	    00
+	   ]
+			      C 
+			      C outputW    	MACRO   var
+			      C                    itoa text, var
+			      C                    output text
+			      C                    output carriage
+			      C                 ENDM
+			      C 
+			      C outputD  	MACRO  var
+			      C                    dtoa text, var
+			      C                    output text
+			      C                    output carriage
+			      C          	ENDM
+			      C 
+			      C inputW          MACRO  prompt, location
+			      C                    output prompt
+			      C                    input text, 8
+			      C                    atoi text
+			      C                    mov location, ax
+			      C                 ENDM
+			      C 
+			      C inputD          MACRO  prompt, location
+			      C                    output prompt
+			      C                    input text, 13
+			      C                    atod text
+			      C                    mov location, eax
+			      C                 ENDM
+			      C 
+				INCLUDE str_utils.h
+			      C .NOLIST
+			      C .LIST
+			      C 
+				INCLUDE quicksort.h
+			      C .NOLIST
+			      C .LIST
+			      C 
+
+ = 0000000E			MAXLEN		EQU 14 
+
+				.STACK 4096
+
+ 00000010			.DATA
+
+ 00000010  000003E8 [			array		WORD 1000 DUP(?)
+	    0000
+	   ]
+ 000007E0 0000				num			WORD ?
+ 000007E2  0000000E [			string		BYTE MAXLEN DUP(?)
+	    00
+	   ]
+ 000007F0 00				source		BYTE ?
+ 000007F1 00				dest		BYTE ?
+ 000007F2 2A 2A 2A 2A 2A		prompt      BYTE "*****Sorted*****"
+	   53 6F 72 74 65
+	   64 2A 2A 2A 2A
+	   2A
+
+ 00000000			.CODE
+ 00000000			_start:
+ 00000000
+ 00000000  B8 00000000			mov eax, 0
+ 00000005  BB 00000000			mov ebx, 0
+ 0000000A  B9 00000000			mov ecx, 0
+ 0000000F  BA 00000000			mov edx, 0
+
+ 00000014  8D 1D 00000010 R		lea ebx, array
+
+ 0000001A				while_loop:
+					
+						input string, MAXLEN
+ 0000002E  80 3D 000007E2 R			cmp string, 'x'
+	   78
+ 00000035  74 25				je done_while
+						
+ 00000037  8D 05 000007E2 R			lea eax, string
+						
+ 0000003D  B9 00000000				mov ecx, 0
+ 00000042  8B F0				mov esi, eax
+ 00000044  8B FB				mov edi, ebx
+ 00000046  FC					cld
+ 00000047  66| B9 000E				mov cx, MAXLEN
+						
+ 0000004B  F3/ A4				rep movsb
+						
+ 0000004D  C6 07 00				mov BYTE PTR [edi], 0
+						
+ 00000050  83 C3 0E				add ebx, MAXLEN
+						
+ 00000053  66| FF 05				inc num
+	   000007E0 R
+						
+ 0000005A  EB BE				jmp while_loop
+						
+ 0000005C				done_while:
+					
+ 0000005C  8D 1D 00000010 R			lea ebx, array
+						
+						output [ebx]
+						output carriage
+						
+ 0000007A  66| B9 0000				mov cx, 0
+						
+ 0000007E				print_while:	
+					
+ 0000007E  66| 41				inc cx
+							
+ 00000080  66| 3B 0D				cmp cx, num
+	   000007E0 R
+ 00000087  74 1D				je end_print
+							
+ 00000089  83 C3 0E				add ebx, MAXLEN			
+						output [ebx]
+						output carriage
+							
+ 000000A4  EB D8				jmp print_while
+							
+ 000000A6				end_print:
+						
+						quicksort array, num, MAXLEN
+						
+ 000000C6  8D 1D 00000010 R			lea ebx, array
+						
+						output carriage
+						output prompt
+						output carriage
+						output carriage
+
+ 00000104  8D 1D 00000010 R			lea ebx, array
+						
+ 0000010A  66| B9 0000				mov cx, 0
+						
+ 0000010E				print_sorted_while:	
+						
+ 0000010E  66| 3B 0D				cmp cx, num
+	   000007E0 R
+ 00000115  74 1F				je done
+								
+						output [ebx]
+ 00000121  83 C3 0E				add ebx, MAXLEN	
+						output carriage
+ 00000132  66| 41				inc cx
+							
+ 00000134  EB D8				jmp print_sorted_while
+						
+ 00000136				done:		
+
+				INVOKE ExitProcess, 0
+
+ 0000013D			PUBLIC _start
+				END
+					
+	
+Microsoft (R) Macro Assembler Version 6.15.8803		    04/20/19 23:09:39
+quicksort_driver.asm					     Symbols 2 - 1
+
+
+
+
+Macros:
+
+                N a m e                 Type
+
+append . . . . . . . . . . . . .	Proc
+atod . . . . . . . . . . . . . .	Proc
+atoi . . . . . . . . . . . . . .	Proc
+compare  . . . . . . . . . . . .	Proc
+dtoa . . . . . . . . . . . . . .	Proc
+equals . . . . . . . . . . . . .	Proc
+index_of . . . . . . . . . . . .	Proc
+inputD . . . . . . . . . . . . .	Proc
+inputW . . . . . . . . . . . . .	Proc
+input  . . . . . . . . . . . . .	Proc
+itoa . . . . . . . . . . . . . .	Proc
+outputD  . . . . . . . . . . . .	Proc
+outputW  . . . . . . . . . . . .	Proc
+output . . . . . . . . . . . . .	Proc
+quicksort  . . . . . . . . . . .	Proc
+replace  . . . . . . . . . . . .	Proc
+strcopy  . . . . . . . . . . . .	Proc
+strlen . . . . . . . . . . . . .	Proc
+substring  . . . . . . . . . . .	Proc
+to_lower . . . . . . . . . . . .	Proc
+to_upper . . . . . . . . . . . .	Proc
+
+
+Segments and Groups:
+
+                N a m e                 Size     Length   Align   Combine Class
+
+FLAT . . . . . . . . . . . . . .	GROUP
+STACK  . . . . . . . . . . . . .	32 Bit	 00001000 Para	  Stack	  'STACK'	 
+_DATA  . . . . . . . . . . . . .	32 Bit	 00000802 Para	  Public  'DATA'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 0000013D Para	  Public  'CODE'	
+
+
+Procedures,  parameters and locals:
+
+                N a m e                 Type     Value    Attr
+
+$$$00001 . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 0000013D Private
+  while_loop . . . . . . . . . .	L Near	 0000001A _TEXT	
+  done_while . . . . . . . . . .	L Near	 0000005C _TEXT	
+  print_while  . . . . . . . . .	L Near	 0000007E _TEXT	
+  end_print  . . . . . . . . . .	L Near	 000000A6 _TEXT	
+  print_sorted_while . . . . . .	L Near	 0000010E _TEXT	
+  done . . . . . . . . . . . . .	L Near	 00000136 _TEXT	
+ExitProcess  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+
+
+Symbols:
+
+                N a m e                 Type     Value    Attr
+
+@CodeSize  . . . . . . . . . . .	Number	 00000000h   
+@DataSize  . . . . . . . . . . .	Number	 00000000h   
+@Interface . . . . . . . . . . .	Number	 00000000h   
+@Model . . . . . . . . . . . . .	Number	 00000007h   
+@code  . . . . . . . . . . . . .	Text   	 _TEXT
+@data  . . . . . . . . . . . . .	Text   	 FLAT
+@fardata?  . . . . . . . . . . .	Text   	 FLAT
+@fardata . . . . . . . . . . . .	Text   	 FLAT
+@stack . . . . . . . . . . . . .	Text   	 FLAT
+CR . . . . . . . . . . . . . . .	Number	 0000000Dh   
+LF . . . . . . . . . . . . . . .	Number	 0000000Ah   
+MAXLEN . . . . . . . . . . . . .	Number	 0000000Eh   
+_start . . . . . . . . . . . . .	L Near	 00000000 _TEXT	Public
+append_proc  . . . . . . . . . .	L Near	 00000000 FLAT	External
+array  . . . . . . . . . . . . .	Word	 00000010 _DATA	
+atodproc . . . . . . . . . . . .	L Near	 00000000 FLAT	External
+atoiproc . . . . . . . . . . . .	L Near	 00000000 FLAT	External
+carriage . . . . . . . . . . . .	Byte	 00000000 _DATA	
+compare_proc . . . . . . . . . .	L Near	 00000000 FLAT	External
+dest . . . . . . . . . . . . . .	Byte	 000007F1 _DATA	
+done_while . . . . . . . . . . .	L Near	 0000005C _TEXT	
+done . . . . . . . . . . . . . .	L Near	 00000136 _TEXT	
+dtoaproc . . . . . . . . . . . .	L Near	 00000000 FLAT	External
+end_print  . . . . . . . . . . .	L Near	 000000A6 _TEXT	
+equals_proc  . . . . . . . . . .	L Near	 00000000 FLAT	External
+indexof_proc . . . . . . . . . .	L Near	 00000000 FLAT	External
+inproc . . . . . . . . . . . . .	L Near	 00000000 FLAT	External
+itoaproc . . . . . . . . . . . .	L Near	 00000000 FLAT	External
+num  . . . . . . . . . . . . . .	Word	 000007E0 _DATA	
+outproc  . . . . . . . . . . . .	L Near	 00000000 FLAT	External
+print_sorted_while . . . . . . .	L Near	 0000010E _TEXT	
+print_while  . . . . . . . . . .	L Near	 0000007E _TEXT	
+prompt . . . . . . . . . . . . .	Byte	 000007F2 _DATA	
+quicksort_proc . . . . . . . . .	L Near	 00000000 FLAT	External
+replace_proc . . . . . . . . . .	L Near	 00000000 FLAT	External
+source . . . . . . . . . . . . .	Byte	 000007F0 _DATA	
+strcopy_proc . . . . . . . . . .	L Near	 00000000 FLAT	External
+string . . . . . . . . . . . . .	Byte	 000007E2 _DATA	
+strlen_proc  . . . . . . . . . .	L Near	 00000000 FLAT	External
+substring_proc . . . . . . . . .	L Near	 00000000 FLAT	External
+text . . . . . . . . . . . . . .	Byte	 00000003 _DATA	
+tolower_proc . . . . . . . . . .	L Near	 00000000 FLAT	External
+toupper_proc . . . . . . . . . .	L Near	 00000000 FLAT	External
+while_loop . . . . . . . . . . .	L Near	 0000001A _TEXT	
+
+	   0 Warnings
+	   0 Errors

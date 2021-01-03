@@ -1,0 +1,360 @@
+Microsoft (R) Macro Assembler Version 6.15.8803		    04/20/19 23:09:39
+quicksort.asm						     Page 1 - 1
+
+
+				.686
+				.MODEL FLAT
+
+				PUBLIC quicksort_proc, partition_proc, swap_proc
+
+				INCLUDE debug.h
+			      C INCLUDE io.h
+			      C ; IO.H -- header file for I/O macros
+			      C ; 32-bit version for flat memory model
+			      C ; R. Detmer   last revised 8/2000
+			      C .NOLIST     ; turn off listing
+			      C .LIST        ; begin listing
+			      C 
+			      C 
+ = 0000000D		      C CR          EQU    0Dh   ; carriage return character
+ = 0000000A		      C LF          EQU    0Ah   ; linefeed character
+			      C 
+ 00000000		      C .DATA
+ 00000000 0D 0A 00	      C carriage    BYTE     CR, LF, 0
+ 00000003  0000000D [	      C text        BYTE     13 DUP(?)
+	    00
+	   ]
+			      C 
+			      C outputW    	MACRO   var
+			      C                    itoa text, var
+			      C                    output text
+			      C                    output carriage
+			      C                 ENDM
+			      C 
+			      C outputD  	MACRO  var
+			      C                    dtoa text, var
+			      C                    output text
+			      C                    output carriage
+			      C          	ENDM
+			      C 
+			      C inputW          MACRO  prompt, location
+			      C                    output prompt
+			      C                    input text, 8
+			      C                    atoi text
+			      C                    mov location, ax
+			      C                 ENDM
+			      C 
+			      C inputD          MACRO  prompt, location
+			      C                    output prompt
+			      C                    input text, 13
+			      C                    atod text
+			      C                    mov location, eax
+			      C                 ENDM
+			      C 
+				INCLUDE str_utils.h
+			      C .NOLIST
+			      C .LIST
+			      C 
+
+ 00000000			.CODE
+
+ 00000000			quicksort_proc     PROC   NEAR32
+
+ = [ebp + 16]			maxlen	EQU [ebp + 16]
+ = [ebp + 12]			array	EQU [ebp + 12]
+ = [ebp + 10]			lo		EQU [ebp + 10]
+ = [ebp + 8]			hi		EQU [ebp + 8]
+
+ 00000000  55					push ebp            
+ 00000001  8B EC				mov ebp, esp
+ 00000003  51					push ecx
+ 00000004  66| 9C				pushf
+						
+ 00000006  8B 45 0A				mov eax, lo
+ 00000009  3B 45 08				cmp eax, hi
+ 0000000C  7D 3E				jge done
+						
+ 0000000E  66| FF 75 10				push WORD PTR maxlen
+ 00000012  FF 75 0C				push DWORD PTR array
+ 00000015  66| FF 75 0A				push WORD PTR lo
+ 00000019  66| FF 75 08				push WORD PTR hi
+ 0000001D  E8 00000033				call partition_proc
+						
+ 00000022  66| 48				dec ax
+						
+ 00000024  66| FF 75 10				push WORD PTR maxlen
+ 00000028  FF 75 0C				push DWORD PTR array
+ 0000002B  66| FF 75 0A				push WORD PTR lo
+ 0000002F  66| 50				push WORD PTR ax
+ 00000031  E8 FFFFFFCA				call quicksort_proc
+						
+ 00000036  66| 40				inc ax
+ 00000038  66| 40				inc ax
+						
+ 0000003A  66| FF 75 10				push WORD PTR maxlen
+ 0000003E  FF 75 0C				push DWORD PTR array
+ 00000041  66| 50				push WORD PTR ax
+ 00000043  66| FF 75 08				push WORD PTR hi
+ 00000047  E8 FFFFFFB4				call quicksort_proc
+						
+ 0000004C					done:
+						
+ 0000004C  66| 9D				popf
+ 0000004E  59					pop ecx
+ 0000004F  8B E5				mov esp, ebp
+ 00000051  5D					pop ebp
+ 00000052  C2 000A				ret 10
+
+ 00000055			quicksort_proc	ENDP
+
+
+ 00000055			partition_proc		PROC	NEAR32
+
+ = [ebp + 16]			maxlen  EQU [ebp + 16]
+ = [ebp + 12]			array	EQU [ebp + 12]
+ = [ebp + 10]			lo		EQU [ebp + 10]
+ = [ebp + 8]			hi		EQU [ebp + 8]
+ = [ebp - 2]			i       EQU [ebp - 2]
+ = [ebp - 4]			j       EQU [ebp - 4]
+
+ 00000055  55						push ebp
+ 00000056  8B EC					mov ebp, esp
+ 00000058  66| 6A 00					pushw 0
+ 0000005B  66| 6A 00					pushw 0
+ 0000005E  50						push eax
+ 0000005F  53						push ebx
+ 00000060  51						push ecx
+ 00000061  52						push edx
+ 00000062  66| 9C					pushf
+						
+ 00000064  8B 5D 08					mov ebx, DWORD PTR hi
+ 00000067  8B 45 10					mov eax, DWORD PTR maxlen
+ 0000006A  F7 E3					mul ebx
+ 0000006C  03 45 0C					add eax, DWORD PTR array			;pivot, arr[hi], eax
+							
+ 0000006F  66| 8B 5D 0A					mov bx, WORD PTR lo
+ 00000073  66| 89 5D FE					mov WORD PTR i, bx
+ 00000077  66| 89 5D FC					mov WORD PTR j, bx
+							
+ 0000007B  66| 8B 45 08					mov ax, WORD PTR hi
+ 0000007F  66| 48					dec ax
+ 00000081  66| 89 45 08					mov WORD PTR hi, ax
+							
+ 00000085					for_loop:
+							
+ 00000085  66| 8B 5D FC					mov bx, WORD PTR j
+ 00000089  66| 3B 5D 08					cmp bx, hi                ;comparing j to (hi-1)
+ 0000008D  74 48					je done
+							
+ 0000008F  8B C8					mov ecx, eax               ;moving pivot into ecx so i can use eax
+ 00000091  8B 5D FC					mov ebx, DWORD PTR j
+ 00000094  8B 45 10					mov eax, DWORD PTR maxlen
+ 00000097  F7 E3					mul ebx
+ 00000099  03 45 0C					add eax, DWORD PTR array
+							
+ 0000009C  50						push eax
+ 0000009D  51						push ecx
+ 0000009E  E8 00000000 E				call compare_proc           ; comparing arr[j] to pivot
+ 000000A3  66| 83 F8 00					cmp ax, 0            
+ 000000A7  7F 22					jg skip
+							
+ 000000A9  8B C2					mov eax, edx               ; putting arr[j] in edx
+ 000000AB  8B 5D FE					mov ebx, DWORD PTR i
+ 000000AE  8B 45 10					mov eax, DWORD PTR maxlen
+ 000000B1  F7 E3					mul ebx
+ 000000B3  03 45 0C					add eax, DWORD PTR array       ;eax is arr[i] now
+							
+ 000000B6  66| FF 75 10					push WORD PTR maxlen
+ 000000BA  50						push eax
+ 000000BB  52						push edx
+ 000000BC  E8 00000034					call swap_proc
+							
+ 000000C1  66| 8B 5D FE					mov bx, WORD PTR i
+ 000000C5  66| 43					inc bx
+ 000000C7  66| 89 5D FE					mov WORD PTR i, bx
+							
+ 000000CB					skip:
+						
+ 000000CB  66| 8B 5D FC					mov bx, WORD PTR j
+ 000000CF  66| 43					inc bx
+ 000000D1  66| 89 5D FC					mov WORD PTR j, bx
+ 000000D5  EB AE					jmp for_loop
+							
+ 000000D7					done:
+
+ 000000D7  8B 5D FE					mov ebx, DWORD PTR i
+ 000000DA  8B 45 10					mov eax, DWORD PTR maxlen
+ 000000DD  F7 E3					mul ebx			
+ 000000DF  03 45 0C					add eax, DWORD PTR array 
+							
+ 000000E2  50						push eax
+ 000000E3  51						push ecx
+ 000000E4  E8 0000000C					call swap_proc
+							
+ 000000E9  5A						pop edx
+ 000000EA  59						pop ecx
+ 000000EB  5B						pop ebx
+ 000000EC  58						pop eax
+ 000000ED  66| 9D					popf
+ 000000EF  8B E5					mov esp, ebp
+ 000000F1  5D						pop ebp
+ 000000F2  C2 000A					ret 10
+					
+ 000000F5			partition_proc	ENDP
+
+
+ 000000F5			swap_proc		PROC	NEAR32
+
+ = [ebp + 16]			maxlen  EQU [ebp + 16]
+ = [ebp + 12]			var1	EQU [ebp + 12]
+ = [ebp + 8]			var2	EQU [ebp + 8]
+
+ 000000F5  55					push ebp  		
+ 000000F6  8B EC				mov ebp, esp
+ 000000F8  50					push eax
+ 000000F9  53					push ebx
+ 000000FA  51					push ecx
+ 000000FB  52					push edx
+ 000000FC  66| 9C				pushf
+						
+ 000000FE  8B 75 0C				mov esi, var1
+ 00000101  8B 7D 08				mov edi, var2
+						
+ 00000104  FC					cld
+ 00000105  66| 8B 4D 10				mov cx, maxlen
+							
+ 00000109				while_loop:
+						 
+ 00000109  66| 83 F9 00				cmp cx, 0
+ 0000010D  74 11				je end_loop
+						
+ 0000010F  AC					lodsb
+ 00000110  4E					dec esi
+ 00000111  87 F7				xchg esi, edi
+ 00000113  A4					movsb
+ 00000114  4E					dec esi
+ 00000115  4F					dec edi
+ 00000116  87 F7				xchg esi, edi
+ 00000118  AA					stosb
+ 00000119  4F					dec edi 
+ 0000011A  46					inc esi
+ 0000011B  47					inc edi
+ 0000011C  66| 49				dec cx
+ 0000011E  EB E9				jmp while_loop
+					
+ 00000120				end_loop:
+						
+ 00000120  66| 9D				popf
+ 00000122  5A					pop edx
+ 00000123  59					pop ecx
+ 00000124  5B					pop ebx	
+ 00000125  58					pop eax
+ 00000126  8B E5				mov esp, ebp
+ 00000128  5D					pop ebp
+ 00000129  C2 000A				ret 10
+
+ 0000012C			swap_proc	ENDP
+
+				END
+
+				 
+Microsoft (R) Macro Assembler Version 6.15.8803		    04/20/19 23:09:39
+quicksort.asm						     Symbols 2 - 1
+
+
+
+
+Macros:
+
+                N a m e                 Type
+
+append . . . . . . . . . . . . .	Proc
+atod . . . . . . . . . . . . . .	Proc
+atoi . . . . . . . . . . . . . .	Proc
+compare  . . . . . . . . . . . .	Proc
+dtoa . . . . . . . . . . . . . .	Proc
+equals . . . . . . . . . . . . .	Proc
+index_of . . . . . . . . . . . .	Proc
+inputD . . . . . . . . . . . . .	Proc
+inputW . . . . . . . . . . . . .	Proc
+input  . . . . . . . . . . . . .	Proc
+itoa . . . . . . . . . . . . . .	Proc
+outputD  . . . . . . . . . . . .	Proc
+outputW  . . . . . . . . . . . .	Proc
+output . . . . . . . . . . . . .	Proc
+replace  . . . . . . . . . . . .	Proc
+strcopy  . . . . . . . . . . . .	Proc
+strlen . . . . . . . . . . . . .	Proc
+substring  . . . . . . . . . . .	Proc
+to_lower . . . . . . . . . . . .	Proc
+to_upper . . . . . . . . . . . .	Proc
+
+
+Segments and Groups:
+
+                N a m e                 Size     Length   Align   Combine Class
+
+FLAT . . . . . . . . . . . . . .	GROUP
+_DATA  . . . . . . . . . . . . .	32 Bit	 00000010 Para	  Public  'DATA'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 0000012C Para	  Public  'CODE'	
+
+
+Procedures,  parameters and locals:
+
+                N a m e                 Type     Value    Attr
+
+partition_proc . . . . . . . . .	P Near	 00000055 _TEXT	Length= 000000A0 Public
+  for_loop . . . . . . . . . . .	L Near	 00000085 _TEXT	
+  skip . . . . . . . . . . . . .	L Near	 000000CB _TEXT	
+  done . . . . . . . . . . . . .	L Near	 000000D7 _TEXT	
+quicksort_proc . . . . . . . . .	P Near	 00000000 _TEXT	Length= 00000055 Public
+  done . . . . . . . . . . . . .	L Near	 0000004C _TEXT	
+swap_proc  . . . . . . . . . . .	P Near	 000000F5 _TEXT	Length= 00000037 Public
+  while_loop . . . . . . . . . .	L Near	 00000109 _TEXT	
+  end_loop . . . . . . . . . . .	L Near	 00000120 _TEXT	
+
+
+Symbols:
+
+                N a m e                 Type     Value    Attr
+
+@CodeSize  . . . . . . . . . . .	Number	 00000000h   
+@DataSize  . . . . . . . . . . .	Number	 00000000h   
+@Interface . . . . . . . . . . .	Number	 00000000h   
+@Model . . . . . . . . . . . . .	Number	 00000007h   
+@code  . . . . . . . . . . . . .	Text   	 _TEXT
+@data  . . . . . . . . . . . . .	Text   	 FLAT
+@fardata?  . . . . . . . . . . .	Text   	 FLAT
+@fardata . . . . . . . . . . . .	Text   	 FLAT
+@stack . . . . . . . . . . . . .	Text   	 FLAT
+CR . . . . . . . . . . . . . . .	Number	 0000000Dh   
+LF . . . . . . . . . . . . . . .	Number	 0000000Ah   
+append_proc  . . . . . . . . . .	L Near	 00000000 FLAT	External
+array  . . . . . . . . . . . . .	Text   	 [ebp + 12]
+atodproc . . . . . . . . . . . .	L Near	 00000000 FLAT	External
+atoiproc . . . . . . . . . . . .	L Near	 00000000 FLAT	External
+carriage . . . . . . . . . . . .	Byte	 00000000 _DATA	
+compare_proc . . . . . . . . . .	L Near	 00000000 FLAT	External
+dtoaproc . . . . . . . . . . . .	L Near	 00000000 FLAT	External
+equals_proc  . . . . . . . . . .	L Near	 00000000 FLAT	External
+hi . . . . . . . . . . . . . . .	Text   	 [ebp + 8]
+indexof_proc . . . . . . . . . .	L Near	 00000000 FLAT	External
+inproc . . . . . . . . . . . . .	L Near	 00000000 FLAT	External
+itoaproc . . . . . . . . . . . .	L Near	 00000000 FLAT	External
+i  . . . . . . . . . . . . . . .	Text   	 [ebp - 2]
+j  . . . . . . . . . . . . . . .	Text   	 [ebp - 4]
+lo . . . . . . . . . . . . . . .	Text   	 [ebp + 10]
+maxlen . . . . . . . . . . . . .	Text   	 [ebp + 16]
+outproc  . . . . . . . . . . . .	L Near	 00000000 FLAT	External
+replace_proc . . . . . . . . . .	L Near	 00000000 FLAT	External
+strcopy_proc . . . . . . . . . .	L Near	 00000000 FLAT	External
+strlen_proc  . . . . . . . . . .	L Near	 00000000 FLAT	External
+substring_proc . . . . . . . . .	L Near	 00000000 FLAT	External
+text . . . . . . . . . . . . . .	Byte	 00000003 _DATA	
+tolower_proc . . . . . . . . . .	L Near	 00000000 FLAT	External
+toupper_proc . . . . . . . . . .	L Near	 00000000 FLAT	External
+var1 . . . . . . . . . . . . . .	Text   	 [ebp + 12]
+var2 . . . . . . . . . . . . . .	Text   	 [ebp + 8]
+
+	   0 Warnings
+	   0 Errors
