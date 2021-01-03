@@ -1,0 +1,730 @@
+Microsoft (R) Macro Assembler Version 6.15.8803		    03/18/19 19:33:45
+vankins.asm						     Page 1 - 1
+
+
+				; Program #1: Vankin's Mile
+				; Author:     Maddison Davenport
+				; Date:       3/5/2019
+
+				.386
+				.MODEL FLAT
+
+				ExitProcess PROTO NEAR32 stdcall, dwExitCode:WORD
+
+				INCLUDE debug.h
+			      C INCLUDE io.h
+			      C ; IO.H -- header file for I/O macros
+			      C ; 32-bit version for flat memory model
+			      C ; R. Detmer   last revised 8/2000
+			      C .NOLIST     ; turn off listing
+			      C .LIST        ; begin listing
+			      C 
+			      C 
+ = 0000000D		      C CR          EQU    0Dh   ; carriage return character
+ = 0000000A		      C LF          EQU    0Ah   ; linefeed character
+			      C 
+ 00000000		      C .DATA
+ 00000000 0D 0A 00	      C carriage    BYTE     CR, LF, 0
+ 00000003  0000000D [	      C text        BYTE     13 DUP(?)
+	    00
+	   ]
+			      C 
+			      C outputW    	MACRO   var
+			      C                    itoa text, var
+			      C                    output text
+			      C                    output carriage
+			      C                 ENDM
+			      C 
+			      C outputD  	MACRO  var
+			      C                    dtoa text, var
+			      C                    output text
+			      C                    output carriage
+			      C          	ENDM
+			      C 
+			      C inputW          MACRO  prompt, location
+			      C                    output prompt
+			      C                    input text, 8
+			      C                    atoi text
+			      C                    mov location, ax
+			      C                 ENDM
+			      C 
+			      C inputD          MACRO  prompt, location
+			      C                    output prompt
+			      C                    input text, 13
+			      C                    atod text
+			      C                    mov location, eax
+			      C                 ENDM
+			      C 
+
+				.STACK 4096
+
+ 00000010			.DATA
+ 00000010  00000064 [		grid			WORD 100 DUP(?)
+	    0000
+	   ]
+ 000000D8  00000064 [		outputGrid		WORD 100 DUP(?)
+	    0000
+	   ]
+ 000001A0 0000			rows			WORD ?
+ 000001A2 0000			colS			WORD ?
+ 000001A4 0001			row				WORD 1
+ 000001A6 0001			col				WORD 1
+ 000001A8 0001			arrayCounter	WORD 1
+ 000001AA 0000			MAXNBRS			WORD ?
+ 000001AC  00000008 [		string			BYTE 8 DUP(?), 0
+	    00
+	   ] 00
+ 000001B5  00000008 [		result_string   BYTE 8 DUP(?), 0
+	    00
+	   ] 00
+ 000001BE 0000			loc             WORD 0
+ 000001C0 0000			loc2			WORD 0
+							
+				setElement	MACRO matrix_addr, row, col, loc
+							local wloop, done
+										
+								push eax
+								push ebx
+								push ecx
+								push edx
+								
+								lea ebx, matrix_addr
+										
+								;getting location
+								mov ax, row
+								sub ax, 1
+								mov dx, cols
+								
+								mul dx 
+								mov cx, col
+								sub cx, 1
+								add ax, cx 
+								mov cx, 0
+								
+								wloop:				
+									cmp cx, ax
+									je done
+										
+									add ebx, 2
+									inc cx
+									cmp cx, ax
+									jl wloop
+											
+								done:
+									mov ax, loc
+									;atoi loc
+									mov [ebx], ax
+									
+								pop edx
+								pop ecx
+								pop ebx
+								pop eax
+									
+								ENDM
+
+				getElement	MACRO matrix_addr, row, col, loc
+							local wloop, done
+								
+								push eax
+								push ebx
+								push ecx
+								push edx
+								
+								lea ebx, matrix_addr
+									
+								;getting location
+								mov ax, row
+								sub ax, 1
+								mov dx, cols
+								mul dx 	
+										
+								mov cx, col
+								sub cx, 1
+								add ax, cx 
+								mov cx, 0
+											
+								cmp cx, ax
+								je done
+											
+								wloop:
+									add ebx, 2
+									inc cx
+									cmp cx, ax
+									jl wloop
+											
+								done:
+								;itoa loc, [ebx]
+								mov ax, [ebx]
+								mov loc, ax
+								
+								pop edx
+								pop ecx
+								pop ebx
+								pop eax
+							
+							ENDM
+						
+				output_grid	MACRO	matrix_addr, row, col
+							local while1, while2, done1, done2
+									
+								push ebx
+								push ecx
+								push edx
+									
+								lea ebx, matrix_addr
+								mov cx, row
+									
+								while1:
+								cmp cx, 0
+								je done1
+					
+								mov dx, col
+									
+								while2:
+								cmp dx, 0
+								je done2
+							
+								itoa string, [ebx]
+								output string
+								add ebx, 2
+							
+								dec dx
+								jmp while2
+									
+								done2:
+						
+								output carriage
+								dec cx
+								jmp while1
+									
+								done1:
+								output carriage
+								
+								pop edx
+								pop ecx
+								pop ebx
+								
+							ENDM
+ 00000000			.CODE
+ 00000000			_start:
+ 00000000
+					inputW string, rows
+					inputW string, cols
+ 0000006C  66| A1			mov ax, rows
+	   000001A0 R
+ 00000072  66| 8B 0D			mov cx, cols
+	   000001A2 R
+ 00000079  66| F7 E1			mul cx
+ 0000007C  66| A3			mov MAXNBRS, ax
+	   000001AA R
+					
+ 00000082  8D 1D 00000010 R		lea ebx, grid
+ 00000088  B9 00000000			mov ecx, 0			
+ 0000008D  66| 8B 0D			mov cx, MAXNBRS
+	   000001AA R
+					
+ 00000094				while_loop:
+					
+ 00000094  66| 83 F9 00				cmp cx, 0
+ 00000098  74 2C				je end_loop
+							
+						input string, 8		
+						atoi string
+ 000000BC  66| 89 03				mov [ebx], ax
+ 000000BF  83 C3 02				add ebx, 2					
+							
+ 000000C2  66| 49				dec cx
+ 000000C4  EB CE				jmp while_loop
+					
+ 000000C6				end_loop:
+						
+						output_grid grid, rows, cols
+						
+ 00000134  66| B8 0001				 mov ax, 1
+ 00000138  66| A3				 mov row, ax
+	   000001A4 R
+						
+ 0000013E  66| B8 0001				 mov ax, 1
+ 00000142  66| A3				 mov col, ax
+	   000001A6 R
+						
+ 00000148				while_grid_into_output:
+					
+						getElement grid, row, col, loc
+						setElement outputGrid, row, col, loc
+						
+ 000001E0  66| FF 05				inc arrayCounter
+	   000001A8 R
+						
+ 000001E7  66| A1				mov ax, MAXNBRS
+	   000001AA R
+ 000001ED  66| 3B 05				cmp ax, arrayCounter
+	   000001A8 R
+ 000001F4  7C 40				jl end_grid_into_output
+						
+ 000001F6  66| FF 05				inc col
+	   000001A6 R
+ 000001FD  66| A1				mov ax, col
+	   000001A6 R
+ 00000203  66| 3B 05				cmp ax, cols
+	   000001A2 R
+ 0000020A  7F 05				jg increase_row
+						
+ 0000020C  E9 FFFFFF37				jmp while_grid_into_output
+						
+ 00000211					increase_row:
+ 00000211  66| FF 05					inc row
+	   000001A4 R
+ 00000218  66| A1					mov ax, row
+	   000001A4 R
+ 0000021E  66| 3B 05					cmp ax, rows
+	   000001A0 R
+ 00000225  7F 0F					jg end_grid_into_output
+						
+ 00000227  66| B8 0001					mov ax, 1
+ 0000022B  66| A3					mov col, ax
+	   000001A6 R
+							
+ 00000231  E9 FFFFFF12					jmp while_grid_into_output
+						
+					
+ 00000236				end_grid_into_output:
+					
+					
+ 00000236  66| A1				mov ax, rows
+	   000001A0 R
+ 0000023C  66| A3				mov row, ax
+	   000001A4 R
+						
+ 00000242  66| A1				mov ax, cols
+	   000001A2 R
+ 00000248  66| A3				mov col, ax
+	   000001A6 R
+					
+ 0000024E				while_bottom_row:
+					 
+						getElement outputGrid, row, col, loc
+						
+ 0000029A  66| FF 0D				dec col	
+	   000001A6 R
+						;mov cx, 0
+ 000002A1  66| 81 3D				cmp col, WORD PTR 0
+	   000001A6 R
+	   0000
+ 000002AA  0F 84 000000BF			je end_bottom_row				
+						
+						;mov al, 0
+ 000002B0  66| 81 3D				cmp loc, WORD PTR 0
+	   000001BE R
+	   0000
+ 000002B9  7E 93				jle while_bottom_row
+							
+						getElement outputGrid, row, col, loc2
+ 00000307  66| B8 0000				mov ax, 0
+ 0000030B  66| A1				mov ax, loc2
+	   000001C0 R
+ 00000311  66| 03 05				add ax, loc
+	   000001BE R
+ 00000318  66| A3				mov loc2, ax
+	   000001C0 R
+						setElement outputGrid, row, col, loc2
+							
+ 0000036A  E9 FFFFFEDF				jmp while_bottom_row
+						
+ 0000036F				end_bottom_row:
+					
+ 0000036F  66| A1				mov ax, cols
+	   000001A2 R
+ 00000375  66| A3				mov col, ax
+	   000001A6 R
+						
+ 0000037B  66| FF 0D				dec row
+	   000001A4 R
+					
+ 00000382				while_solve:
+						
+						;mov ax, 0
+ 00000382  66| 81 3D				cmp row, WORD PTR 0
+	   000001A4 R
+	   0000
+ 0000038B  0F 84 0000035B			je end_solve
+							
+ 00000391  66| FF 05				inc row
+	   000001A4 R
+						getElement outputGrid, row, col, loc
+ 000003E4  66| FF 0D				dec row
+	   000001A4 R
+						
+						;mov al, 0
+ 000003EB  66| 81 3D				cmp loc, WORD PTR 0
+	   000001BE R
+	   0000
+ 000003F4  0F 8E 000000AB			jle while_solve2
+							
+						getElement outputGrid, row, col, loc2
+ 00000446  66| A1				mov ax, loc2
+	   000001C0 R
+ 0000044C  66| 03 05				add ax, loc
+	   000001BE R
+ 00000453  66| A3				mov loc2, ax
+	   000001C0 R
+						setElement outputGrid, row, col, loc2
+						
+ 000004A5				while_solve2:
+						getElement outputGrid, row, col, loc	
+ 000004F1  66| FF 0D				dec col
+	   000001A6 R
+						;mov ax, 0
+ 000004F8  66| 81 3D				cmp col, WORD PTR 0
+	   000001A6 R
+	   0000
+ 00000501  0F 84 000001CD			je end_solve2
+								
+ 00000507  66| FF 05				inc row
+	   000001A4 R
+						getElement outputGrid, row, col, loc2	
+ 0000055A  66| FF 0D				dec row
+	   000001A4 R
+								
+ 00000561  66| A1				mov ax, loc
+	   000001BE R
+ 00000567  66| 3B 05				cmp ax, loc2
+	   000001C0 R
+ 0000056E  0F 8C 000000B0			jl add_bottom				
+								
+						getElement outputGrid, row, col, loc2
+ 000005C0  66| A1				mov ax, loc2
+	   000001C0 R
+ 000005C6  66| 03 05				add ax, loc
+	   000001BE R
+ 000005CD  66| A3				mov loc2, ax
+	   000001C0 R
+						setElement outputGrid, row, col, loc2
+ 0000061F  E9 000000AB				jmp done_add
+								
+ 00000624				add_bottom:
+						getElement outputGrid, row, col, loc
+ 00000670  66| A1				mov ax, loc2
+	   000001C0 R
+ 00000676  66| 03 05				add ax, loc
+	   000001BE R
+ 0000067D  66| A3				mov loc2, ax
+	   000001C0 R
+						setElement outputGrid, row, col, loc2
+								
+ 000006CF				done_add:
+ 000006CF  E9 FFFFFDD1				jmp while_solve2
+					
+ 000006D4				end_solve2:
+							
+ 000006D4  66| FF 0D				dec row
+	   000001A4 R
+							
+ 000006DB  66| A1				mov ax, cols
+	   000001A2 R
+ 000006E1  66| A3				mov col, ax
+	   000001A6 R
+							
+ 000006E7  E9 FFFFFC96				jmp while_solve
+							
+ 000006EC				end_solve:
+					
+						output_grid outputGrid, rows, cols
+					
+ 0000075A  66| B8 0001			mov ax, 1
+ 0000075E  66| A3			mov row, ax
+	   000001A4 R
+ 00000764  66| A3			mov col, ax
+	   000001A6 R
+					
+ 0000076A				while_string:
+ 0000076A  66| A1				mov ax, row
+	   000001A4 R
+ 00000770  66| 3B 05				cmp ax, rows					
+	   000001A0 R
+ 00000777  0F 8F 00000159			jg end_string
+						
+ 0000077D  66| A1				mov ax, col
+	   000001A6 R
+ 00000783  66| 3B 05				cmp ax, cols
+	   000001A2 R
+ 0000078A  0F 8F 00000146			jg end_string
+						
+ 00000790  66| FF 05				inc col
+	   000001A6 R
+ 00000797  66| A1				mov ax, col
+	   000001A6 R
+ 0000079D  66| 3B 05				cmp ax, cols				
+	   000001A2 R
+ 000007A4  7F 55				jg right
+						
+						getElement outputGrid, row, col, loc
+ 000007F2  66| FF 0D				dec col
+	   000001A6 R
+ 000007F9  EB 11				jmp go_right
+						
+ 000007FB					right:						
+ 000007FB  66| B8 0000				mov ax, 0
+ 000007FF  66| A3				mov loc, ax
+	   000001BE R
+ 00000805  66| FF 0D				dec col
+	   000001A6 R
+ 0000080C					go_right:
+						
+ 0000080C  66| FF 05				inc row
+	   000001A4 R
+ 00000813  66| A1				mov ax, row
+	   000001A4 R
+ 00000819  66| 3B 05				cmp ax, rows					
+	   000001A0 R
+ 00000820  7F 55				jg down
+						
+						getElement outputGrid, row, col, loc2	
+ 0000086E  66| FF 0D				dec row
+	   000001A4 R
+ 00000875  EB 11				jmp go_down
+						
+ 00000877					down:						
+ 00000877  66| B8 0000				mov ax, 0
+ 0000087B  66| A3				mov loc2, ax
+	   000001C0 R
+ 00000881  66| FF 0D				dec row
+	   000001A4 R
+ 00000888					go_down:
+						
+ 00000888  66| A1				mov ax, loc2
+	   000001C0 R
+ 0000088E  66| 39 05				cmp loc, ax 				
+	   000001BE R
+ 00000895  7C 1E				jl downPlz					
+						
+ 00000897  C6 05 000001B5 R			mov result_string, 'r'			
+	   72
+						output result_string
+ 000008AC  66| FF 05				inc col
+	   000001A6 R
+ 000008B3  EB 1C				jmp done_move
+						
+ 000008B5					downPlz:
+ 000008B5  C6 05 000001B5 R			mov result_string, 'd'		
+	   64
+						output result_string
+ 000008CA  66| FF 05				inc row
+	   000001A4 R
+						
+ 000008D1					done_move:
+ 000008D1  E9 FFFFFE94				jmp while_string
+
+ 000008D6				end_string:
+					
+					output carriage
+					output carriage
+
+				INVOKE ExitProcess, 0
+
+ 000008F9			PUBLIC _start
+				END
+Microsoft (R) Macro Assembler Version 6.15.8803		    03/18/19 19:33:45
+vankins.asm						     Symbols 2 - 1
+
+
+
+
+Macros:
+
+                N a m e                 Type
+
+atod . . . . . . . . . . . . . .	Proc
+atoi . . . . . . . . . . . . . .	Proc
+dtoa . . . . . . . . . . . . . .	Proc
+getElement . . . . . . . . . . .	Proc
+inputD . . . . . . . . . . . . .	Proc
+inputW . . . . . . . . . . . . .	Proc
+input  . . . . . . . . . . . . .	Proc
+itoa . . . . . . . . . . . . . .	Proc
+outputD  . . . . . . . . . . . .	Proc
+outputW  . . . . . . . . . . . .	Proc
+output_grid  . . . . . . . . . .	Proc
+output . . . . . . . . . . . . .	Proc
+setElement . . . . . . . . . . .	Proc
+
+
+Segments and Groups:
+
+                N a m e                 Size     Length   Align   Combine Class
+
+FLAT . . . . . . . . . . . . . .	GROUP
+STACK  . . . . . . . . . . . . .	32 Bit	 00001000 DWord	  Stack	  'STACK'	 
+_DATA  . . . . . . . . . . . . .	32 Bit	 000001C2 DWord	  Public  'DATA'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 000008F9 DWord	  Public  'CODE'	
+
+
+Procedures,  parameters and locals:
+
+                N a m e                 Type     Value    Attr
+
+$$$00001 . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 000008F9 Private
+  while_loop . . . . . . . . . .	L Near	 00000094 _TEXT	
+  end_loop . . . . . . . . . . .	L Near	 000000C6 _TEXT	
+  ??0000 . . . . . . . . . . . .	L Near	 000000D6 _TEXT	
+  ??0001 . . . . . . . . . . . .	L Near	 000000E3 _TEXT	
+  ??0003 . . . . . . . . . . . .	L Near	 00000111 _TEXT	
+  ??0002 . . . . . . . . . . . .	L Near	 00000123 _TEXT	
+  while_grid_into_output . . . .	L Near	 00000148 _TEXT	
+  ??0004 . . . . . . . . . . . .	L Near	 0000017D _TEXT	
+  ??0005 . . . . . . . . . . . .	L Near	 00000187 _TEXT	
+  ??0006 . . . . . . . . . . . .	L Near	 000001C4 _TEXT	
+  ??0007 . . . . . . . . . . . .	L Near	 000001D3 _TEXT	
+  increase_row . . . . . . . . .	L Near	 00000211 _TEXT	
+  end_grid_into_output . . . . .	L Near	 00000236 _TEXT	
+  while_bottom_row . . . . . . .	L Near	 0000024E _TEXT	
+  ??0008 . . . . . . . . . . . .	L Near	 00000283 _TEXT	
+  ??0009 . . . . . . . . . . . .	L Near	 0000028D _TEXT	
+  ??000A . . . . . . . . . . . .	L Near	 000002F0 _TEXT	
+  ??000B . . . . . . . . . . . .	L Near	 000002FA _TEXT	
+  ??000C . . . . . . . . . . . .	L Near	 0000034E _TEXT	
+  ??000D . . . . . . . . . . . .	L Near	 0000035D _TEXT	
+  end_bottom_row . . . . . . . .	L Near	 0000036F _TEXT	
+  while_solve  . . . . . . . . .	L Near	 00000382 _TEXT	
+  ??000E . . . . . . . . . . . .	L Near	 000003CD _TEXT	
+  ??000F . . . . . . . . . . . .	L Near	 000003D7 _TEXT	
+  ??0010 . . . . . . . . . . . .	L Near	 0000042F _TEXT	
+  ??0011 . . . . . . . . . . . .	L Near	 00000439 _TEXT	
+  ??0012 . . . . . . . . . . . .	L Near	 00000489 _TEXT	
+  ??0013 . . . . . . . . . . . .	L Near	 00000498 _TEXT	
+  while_solve2 . . . . . . . . .	L Near	 000004A5 _TEXT	
+  ??0014 . . . . . . . . . . . .	L Near	 000004DA _TEXT	
+  ??0015 . . . . . . . . . . . .	L Near	 000004E4 _TEXT	
+  ??0016 . . . . . . . . . . . .	L Near	 00000543 _TEXT	
+  ??0017 . . . . . . . . . . . .	L Near	 0000054D _TEXT	
+  ??0018 . . . . . . . . . . . .	L Near	 000005A9 _TEXT	
+  ??0019 . . . . . . . . . . . .	L Near	 000005B3 _TEXT	
+  ??001A . . . . . . . . . . . .	L Near	 00000603 _TEXT	
+  ??001B . . . . . . . . . . . .	L Near	 00000612 _TEXT	
+  add_bottom . . . . . . . . . .	L Near	 00000624 _TEXT	
+  ??001C . . . . . . . . . . . .	L Near	 00000659 _TEXT	
+  ??001D . . . . . . . . . . . .	L Near	 00000663 _TEXT	
+  ??001E . . . . . . . . . . . .	L Near	 000006B3 _TEXT	
+  ??001F . . . . . . . . . . . .	L Near	 000006C2 _TEXT	
+  done_add . . . . . . . . . . .	L Near	 000006CF _TEXT	
+  end_solve2 . . . . . . . . . .	L Near	 000006D4 _TEXT	
+  end_solve  . . . . . . . . . .	L Near	 000006EC _TEXT	
+  ??0020 . . . . . . . . . . . .	L Near	 000006FC _TEXT	
+  ??0021 . . . . . . . . . . . .	L Near	 00000709 _TEXT	
+  ??0023 . . . . . . . . . . . .	L Near	 00000737 _TEXT	
+  ??0022 . . . . . . . . . . . .	L Near	 00000749 _TEXT	
+  while_string . . . . . . . . .	L Near	 0000076A _TEXT	
+  ??0024 . . . . . . . . . . . .	L Near	 000007DB _TEXT	
+  ??0025 . . . . . . . . . . . .	L Near	 000007E5 _TEXT	
+  right  . . . . . . . . . . . .	L Near	 000007FB _TEXT	
+  go_right . . . . . . . . . . .	L Near	 0000080C _TEXT	
+  ??0026 . . . . . . . . . . . .	L Near	 00000857 _TEXT	
+  ??0027 . . . . . . . . . . . .	L Near	 00000861 _TEXT	
+  down . . . . . . . . . . . . .	L Near	 00000877 _TEXT	
+  go_down  . . . . . . . . . . .	L Near	 00000888 _TEXT	
+  downPlz  . . . . . . . . . . .	L Near	 000008B5 _TEXT	
+  done_move  . . . . . . . . . .	L Near	 000008D1 _TEXT	
+  end_string . . . . . . . . . .	L Near	 000008D6 _TEXT	
+ExitProcess  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+
+
+Symbols:
+
+                N a m e                 Type     Value    Attr
+
+??0000 . . . . . . . . . . . . .	L Near	 000000D6 _TEXT	
+??0001 . . . . . . . . . . . . .	L Near	 000000E3 _TEXT	
+??0002 . . . . . . . . . . . . .	L Near	 00000123 _TEXT	
+??0003 . . . . . . . . . . . . .	L Near	 00000111 _TEXT	
+??0004 . . . . . . . . . . . . .	L Near	 0000017D _TEXT	
+??0005 . . . . . . . . . . . . .	L Near	 00000187 _TEXT	
+??0006 . . . . . . . . . . . . .	L Near	 000001C4 _TEXT	
+??0007 . . . . . . . . . . . . .	L Near	 000001D3 _TEXT	
+??0008 . . . . . . . . . . . . .	L Near	 00000283 _TEXT	
+??0009 . . . . . . . . . . . . .	L Near	 0000028D _TEXT	
+??000A . . . . . . . . . . . . .	L Near	 000002F0 _TEXT	
+??000B . . . . . . . . . . . . .	L Near	 000002FA _TEXT	
+??000C . . . . . . . . . . . . .	L Near	 0000034E _TEXT	
+??000D . . . . . . . . . . . . .	L Near	 0000035D _TEXT	
+??000E . . . . . . . . . . . . .	L Near	 000003CD _TEXT	
+??000F . . . . . . . . . . . . .	L Near	 000003D7 _TEXT	
+??0010 . . . . . . . . . . . . .	L Near	 0000042F _TEXT	
+??0011 . . . . . . . . . . . . .	L Near	 00000439 _TEXT	
+??0012 . . . . . . . . . . . . .	L Near	 00000489 _TEXT	
+??0013 . . . . . . . . . . . . .	L Near	 00000498 _TEXT	
+??0014 . . . . . . . . . . . . .	L Near	 000004DA _TEXT	
+??0015 . . . . . . . . . . . . .	L Near	 000004E4 _TEXT	
+??0016 . . . . . . . . . . . . .	L Near	 00000543 _TEXT	
+??0017 . . . . . . . . . . . . .	L Near	 0000054D _TEXT	
+??0018 . . . . . . . . . . . . .	L Near	 000005A9 _TEXT	
+??0019 . . . . . . . . . . . . .	L Near	 000005B3 _TEXT	
+??001A . . . . . . . . . . . . .	L Near	 00000603 _TEXT	
+??001B . . . . . . . . . . . . .	L Near	 00000612 _TEXT	
+??001C . . . . . . . . . . . . .	L Near	 00000659 _TEXT	
+??001D . . . . . . . . . . . . .	L Near	 00000663 _TEXT	
+??001E . . . . . . . . . . . . .	L Near	 000006B3 _TEXT	
+??001F . . . . . . . . . . . . .	L Near	 000006C2 _TEXT	
+??0020 . . . . . . . . . . . . .	L Near	 000006FC _TEXT	
+??0021 . . . . . . . . . . . . .	L Near	 00000709 _TEXT	
+??0022 . . . . . . . . . . . . .	L Near	 00000749 _TEXT	
+??0023 . . . . . . . . . . . . .	L Near	 00000737 _TEXT	
+??0024 . . . . . . . . . . . . .	L Near	 000007DB _TEXT	
+??0025 . . . . . . . . . . . . .	L Near	 000007E5 _TEXT	
+??0026 . . . . . . . . . . . . .	L Near	 00000857 _TEXT	
+??0027 . . . . . . . . . . . . .	L Near	 00000861 _TEXT	
+@CodeSize  . . . . . . . . . . .	Number	 00000000h   
+@DataSize  . . . . . . . . . . .	Number	 00000000h   
+@Interface . . . . . . . . . . .	Number	 00000000h   
+@Model . . . . . . . . . . . . .	Number	 00000007h   
+@code  . . . . . . . . . . . . .	Text   	 _TEXT
+@data  . . . . . . . . . . . . .	Text   	 FLAT
+@fardata?  . . . . . . . . . . .	Text   	 FLAT
+@fardata . . . . . . . . . . . .	Text   	 FLAT
+@stack . . . . . . . . . . . . .	Text   	 FLAT
+CR . . . . . . . . . . . . . . .	Number	 0000000Dh   
+LF . . . . . . . . . . . . . . .	Number	 0000000Ah   
+MAXNBRS  . . . . . . . . . . . .	Word	 000001AA _DATA	
+_start . . . . . . . . . . . . .	L Near	 00000000 _TEXT	Public
+add_bottom . . . . . . . . . . .	L Near	 00000624 _TEXT	
+arrayCounter . . . . . . . . . .	Word	 000001A8 _DATA	
+atodproc . . . . . . . . . . . .	L Near	 00000000 FLAT	External
+atoiproc . . . . . . . . . . . .	L Near	 00000000 FLAT	External
+carriage . . . . . . . . . . . .	Byte	 00000000 _DATA	
+colS . . . . . . . . . . . . . .	Word	 000001A2 _DATA	
+col  . . . . . . . . . . . . . .	Word	 000001A6 _DATA	
+done_add . . . . . . . . . . . .	L Near	 000006CF _TEXT	
+done_move  . . . . . . . . . . .	L Near	 000008D1 _TEXT	
+downPlz  . . . . . . . . . . . .	L Near	 000008B5 _TEXT	
+down . . . . . . . . . . . . . .	L Near	 00000877 _TEXT	
+dtoaproc . . . . . . . . . . . .	L Near	 00000000 FLAT	External
+end_bottom_row . . . . . . . . .	L Near	 0000036F _TEXT	
+end_grid_into_output . . . . . .	L Near	 00000236 _TEXT	
+end_loop . . . . . . . . . . . .	L Near	 000000C6 _TEXT	
+end_solve2 . . . . . . . . . . .	L Near	 000006D4 _TEXT	
+end_solve  . . . . . . . . . . .	L Near	 000006EC _TEXT	
+end_string . . . . . . . . . . .	L Near	 000008D6 _TEXT	
+go_down  . . . . . . . . . . . .	L Near	 00000888 _TEXT	
+go_right . . . . . . . . . . . .	L Near	 0000080C _TEXT	
+grid . . . . . . . . . . . . . .	Word	 00000010 _DATA	
+increase_row . . . . . . . . . .	L Near	 00000211 _TEXT	
+inproc . . . . . . . . . . . . .	L Near	 00000000 FLAT	External
+itoaproc . . . . . . . . . . . .	L Near	 00000000 FLAT	External
+loc2 . . . . . . . . . . . . . .	Word	 000001C0 _DATA	
+loc  . . . . . . . . . . . . . .	Word	 000001BE _DATA	
+outproc  . . . . . . . . . . . .	L Near	 00000000 FLAT	External
+outputGrid . . . . . . . . . . .	Word	 000000D8 _DATA	
+result_string  . . . . . . . . .	Byte	 000001B5 _DATA	
+right  . . . . . . . . . . . . .	L Near	 000007FB _TEXT	
+rows . . . . . . . . . . . . . .	Word	 000001A0 _DATA	
+row  . . . . . . . . . . . . . .	Word	 000001A4 _DATA	
+string . . . . . . . . . . . . .	Byte	 000001AC _DATA	
+text . . . . . . . . . . . . . .	Byte	 00000003 _DATA	
+while_bottom_row . . . . . . . .	L Near	 0000024E _TEXT	
+while_grid_into_output . . . . .	L Near	 00000148 _TEXT	
+while_loop . . . . . . . . . . .	L Near	 00000094 _TEXT	
+while_solve2 . . . . . . . . . .	L Near	 000004A5 _TEXT	
+while_solve  . . . . . . . . . .	L Near	 00000382 _TEXT	
+while_string . . . . . . . . . .	L Near	 0000076A _TEXT	
+
+	   0 Warnings
+	   0 Errors
